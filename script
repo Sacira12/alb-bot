@@ -1,0 +1,58 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from bs4 import BeautifulSoup
+from aiogram import Bot, Dispatcher
+from aiogram.filters import CommandStart
+from aiogram.types import Message
+def read():
+    with open('file.txt') as file:
+        return file.read()
+# Вместо BOT TOKEN HERE нужно вставить токен вашего бота,
+# полученный у @BotFather
+BOT_TOKEN = read() # вставляем токен вашего бота
+# Создаем объекты бота и диспетчера
+bot = Bot(BOT_TOKEN)
+dp = Dispatcher()
+
+
+
+# Этот хэндлер будет срабатывать на команду "/start"
+@dp.message(CommandStart())
+async def process_start_command(message: Message):
+    await message.answer('начинаем работу')
+# этот хэндлер срабатывает на остальные сообщения
+@dp.message()
+async def screeyn(message: Message):
+    if message.text=='/новости':
+        c=''
+        op = webdriver.ChromeOptions()
+        prefs = {"profile.managed_default_content_settings.images": 2,
+                 "profile.managed_default_content_settings.media_stream": 2} # отключает загрузку видео и фото
+        op.add_experimental_option("prefs", prefs)
+        # op.add_argument('--headless') # можно открывать страницу браузера в фоновом режиме
+        ser = Service(ChromeDriverManager().install())
+        brow = webdriver.Chrome(service=ser, options=op)
+        brow.get('https://albiononline.com/news') # ссылка на страницу в браузере
+        brow.implicitly_wait(0.1)
+        try:
+            button = brow.find_element('class name', 'news-item__headline')  # находим нужную кнопку по которой надо перейти
+            button.click()
+        except:
+            print('ошибка')
+        html = brow.page_source
+        brow.quit()
+        soup = BeautifulSoup(html, 'html.parser') # парсим html который получили с нужного сайта
+        targ = soup.find('div', {'class': 'content-container'})
+        if targ:
+            text = targ.get_text().strip()
+            i1 = text.index('Назад')
+            i2 = text.index('Назад', i1 + 1)
+            l = text[i1 + 5:i2 - 5].split('\n')
+            for i in l:
+                if i != '':
+                    c+=i.strip()+'\n'
+        await message.reply(c)
+
+if __name__ == '__main__':
+    dp.run_polling(bot)
